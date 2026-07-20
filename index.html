@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini 3.5 API Code Loader</title>
+    <title>Gemini High-Access Chatbox</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -101,7 +101,7 @@
 <body>
 
 <div class="chat-container">
-    <h3>Gemini 3.5 AI</h3>
+    <h3>Gemini Stable Free AI</h3>
     
     <div class="key-section">
         <label for="apiKey">Enter your Gemini API Key:</label>
@@ -152,10 +152,18 @@
         chatInterface.classList.remove("disabled-chat");
     }
 
-    async function askGemini() {
+    // Helper utility to pause execution during high demand spikes
+    const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+
+    async function askGemini(retryCount = 0) {
         const inputField = document.getElementById("userInput");
         const outputDiv = document.getElementById("output");
-        const prompt = inputField.value.trim();
+        
+        // Preserve prompt value across automated retry attempts
+        let prompt = inputField.value.trim();
+        if (!prompt && retryCount > 0) {
+            prompt = outputDiv.dataset.currentPrompt;
+        }
 
         if (!activeApiKey) {
             outputDiv.innerText = "Please submit an active 'AQ' API key above first.";
@@ -164,18 +172,25 @@
 
         if (!prompt) return;
 
-        outputDiv.innerText = "Thinking...";
-        inputField.value = "";
+        // Track prompt to ensure it doesn't get wiped if a server retry happens
+        outputDiv.dataset.currentPrompt = prompt;
 
-        // URL endpoint clean from query strings for AQ key authorization rules
-        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent";
+        if (retryCount === 0) {
+            outputDiv.innerText = "Thinking...";
+            inputField.value = "";
+        } else {
+            outputDiv.innerText = `Server busy. Retrying automatically... (Attempt ${retryCount}/3)`;
+        }
+
+        // TARGET: gemini-2.5-flash has the highest available free limits
+        const url = "https://googleapis.com";
 
         try {
             const response = await fetch(url, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "x-goog-api-key": activeApiKey // FIXED: Secure header transmission required for AQ-keys
+                    "x-goog-api-key": activeApiKey 
                 },
                 body: JSON.stringify({
                     contents: [{
@@ -186,23 +201,31 @@
 
             const data = await response.json();
             
-            // Check for API-specific error blocks returned by Google
+            // AUTOMATED RETRY LOGIC FOR HIGH DEMAND (503 status code or message)
             if (data.error) {
+                const isHighDemand = data.error.status === "UNAVAILABLE" || 
+                                     data.error.code === 503 || 
+                                     data.error.message.toLowerCase().includes("high demand");
+                
+                if (isHighDemand && retryCount < 3) {
+                    await sleep(2000); // Wait 2 seconds before retrying
+                    return askGemini(retryCount + 1);
+                }
+
                 outputDiv.innerText = "API Error: " + data.error.message;
                 return;
             }
 
-            // Extract response text safely from array elements
+            // Extract response text safely
             if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
                 outputDiv.innerText = data.candidates[0].content.parts[0].text;
             } else {
-                outputDiv.innerText = "Error: Response structure did not match standard format.";
-                console.log("Unexpected response format:", data);
+                outputDiv.innerText = "Error: Response structure layout mismatched.";
             }
 
         } catch (error) {
             console.error("Connection Error:", error);
-            outputDiv.innerText = "Connection Failed. Open your browser console (F12) to see if local network CORS policies are blocking Google.";
+            outputDiv.innerText = "Connection Failed. Check your network or developer console logs.";
         }
     }
 </script>
