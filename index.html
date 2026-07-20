@@ -3,57 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini AI HTML Integration</title>
+    <title>Gemini AI HTML Integration (User Key)</title>
     <style>
-        body { font-family: sans-serif; margin: 40px; }
-        .container { max-width: 600px; margin: auto; }
-        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
-        button { padding: 10px 20px; background-color: #4285F4; color: white; border: none; cursor: pointer; }
-        #output { margin-top: 20px; padding: 15px; background: #f4f4f4; border-left: 5px solid #4285F4; white-space: pre-wrap; }
+        body { font-family: sans-serif; margin: 40px; background-color: #f9f9f9; color: #333; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .section { margin-bottom: 20px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; }
+        input[type="password"], textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        textarea { height: 100px; resize: vertical; }
+        .btn-group { display: flex; gap: 10px; margin-top: 5px; }
+        button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-primary { background-color: #4285F4; color: white; }
+        .btn-secondary { background-color: #e0e0e0; color: #333; }
+        #output { margin-top: 20px; padding: 15px; background: #f4f4f4; border-left: 5px solid #4285F4; border-radius: 4px; white-space: pre-wrap; min-height: 40px; }
+        .status-msg { font-size: 0.85em; margin-top: 5px; color: #666; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Ask Gemini AI</h2>
-    <textarea id="prompt" placeholder="Type your question here..."></textarea>
-    <button id="submitBtn">Generate Response</button>
+    <h2>Gemini AI Client Workbench</h2>
+    
+    <!-- API Key Section -->
+    <div class="section">
+        <label for="apiKey">Your Gemini API Key:</label>
+        <input type="password" id="apiKey" placeholder="AIzaSy..." autocomplete="off">
+        <div class="btn-group">
+            <button id="saveKeyBtn" class="btn-secondary">Save Key Locally</button>
+            <button id="clearKeyBtn" class="btn-secondary" style="background-color: #ffebee; color: #c62828;">Clear Key</button>
+        </div>
+        <div id="keyStatus" class="status-msg"></div>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
+
+    <!-- Prompt Section -->
+    <div class="section">
+        <label for="prompt">Prompt:</label>
+        <textarea id="prompt" placeholder="Type your prompt here..."></textarea>
+        <button id="submitBtn" class="btn-primary" style="margin-top: 10px; width: 100%;">Generate Response</button>
+    </div>
+
+    <!-- Output Section -->
     <div id="output">AI response will appear here...</div>
 </div>
 
 <!-- Gemini AI Integration Script -->
 <script type="module">
-    // 1. Import the official Google Gen AI SDK from an ESM-compliant CDN
+    // Import the official Google Gen AI SDK from an ESM-compliant CDN
     import { GoogleGenAI } from "https://esm.run";
 
-    // 2. Define elements
+    // DOM Elements
+    const apiKeyInput = document.getElementById("apiKey");
+    const saveKeyBtn = document.getElementById("saveKeyBtn");
+    const clearKeyBtn = document.getElementById("clearKeyBtn");
+    const keyStatus = document.getElementById("keyStatus");
     const promptInput = document.getElementById("prompt");
     const submitBtn = document.getElementById("submitBtn");
     const outputDiv = document.getElementById("output");
 
-    // 3. Set up event listener
+    // Load key from localStorage on page load
+    const savedKey = localStorage.getItem("user_gemini_api_key");
+    if (savedKey) {
+        apiKeyInput.value = savedKey;
+        keyStatus.innerText = "🔑 Key loaded from browser storage.";
+        keyStatus.style.color = "green";
+    }
+
+    // Save Key Functionality
+    saveKeyBtn.addEventListener("click", () => {
+        const key = apiKeyInput.value.trim();
+        if (!key) {
+            keyStatus.innerText = "❌ Please enter a valid key first.";
+            keyStatus.style.color = "red";
+            return;
+        }
+        localStorage.setItem("user_gemini_api_key", key);
+        keyStatus.innerText = "💾 Key saved securely in your browser storage!";
+        keyStatus.style.color = "green";
+    });
+
+    // Clear Key Functionality
+    clearKeyBtn.addEventListener("click", () => {
+        localStorage.removeItem("user_gemini_api_key");
+        apiKeyInput.value = "";
+        keyStatus.innerText = "🗑️ Key cleared from browser storage.";
+        keyStatus.style.color = "#666";
+    });
+
+    // Generate Response Functionality
     submitBtn.addEventListener("click", async () => {
+        // Dynamic lookup: Checks the input box field directly or falls back to storage
+        const activeKey = apiKeyInput.value.trim() || localStorage.getItem("user_gemini_api_key");
+        
+        if (!activeKey) {
+            alert("Please provide a Gemini API Key in the designated input box first!");
+            return;
+        }
+
         const textPrompt = promptInput.value.trim();
         if (!textPrompt) return alert("Please enter a prompt!");
 
         outputDiv.innerText = "Thinking...";
 
         try {
-            // 4. Initialize the client (Pass your API Key)
-            const ai = new GoogleGenAI({ apiKey: "YOUR_API_KEY_HERE" });
+            // Initialize the SDK using the user's private key
+            const ai = new GoogleGenAI({ apiKey: activeKey });
 
-            // 5. Call the API using the latest recommended model
+            // Request generation from the foundational model
             const interaction = await ai.models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: textPrompt,
             });
 
-            // 6. Display the text output
+            // Display the text markdown/plain-text response
             outputDiv.innerText = interaction.text;
 
         } catch (error) {
             console.error("Gemini Error:", error);
-            outputDiv.innerText = "Error fetching response. Check developer console.";
+            outputDiv.innerText = `Error: ${error.message || "Failed to fetch response. Check console details."}`;
         }
     });
 </script>
