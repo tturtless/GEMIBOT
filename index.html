@@ -3,127 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini AI HTML Integration (User Key)</title>
+    <title>Gemini 3.5 AI Chatbox</title>
     <style>
-        body { font-family: sans-serif; margin: 40px; background-color: #f9f9f9; color: #333; }
-        .container { max-width: 600px; margin: auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .section { margin-bottom: 20px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; }
-        input[type="password"], textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        textarea { height: 100px; resize: vertical; }
-        .btn-group { display: flex; gap: 10px; margin-top: 5px; }
-        button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        .btn-primary { background-color: #4285F4; color: white; }
-        .btn-secondary { background-color: #e0e0e0; color: #333; }
-        #output { margin-top: 20px; padding: 15px; background: #f4f4f4; border-left: 5px solid #4285F4; border-radius: 4px; white-space: pre-wrap; min-height: 40px; }
-        .status-msg { font-size: 0.85em; margin-top: 5px; color: #666; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .chat-container {
+            width: 400px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .output-box {
+            height: 200px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            overflow-y: auto;
+            background: #fafafa;
+            margin-bottom: 15px;
+            white-space: pre-wrap;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 15px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1557b0;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Gemini AI Client Workbench</h2>
+<div class="chat-container">
+    <h3>Gemini 3.5 AI</h3>
+    <!-- Response Box -->
+    <div id="output" class="output-box">AI responses will appear here...</div>
     
-    <!-- API Key Section -->
-    <div class="section">
-        <label for="apiKey">Your Gemini API Key:</label>
-        <input type="password" id="apiKey" placeholder="AIzaSy..." autocomplete="off">
-        <div class="btn-group">
-            <button id="saveKeyBtn" class="btn-secondary">Save Key Locally</button>
-            <button id="clearKeyBtn" class="btn-secondary" style="background-color: #ffebee; color: #c62828;">Clear Key</button>
-        </div>
-        <div id="keyStatus" class="status-msg"></div>
+    <!-- Input Box and Button -->
+    <div class="input-group">
+        <input type="text" id="userInput" placeholder="Ask Gemini something...">
+        <button onclick="askGemini()">Send</button>
     </div>
-
-    <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
-
-    <!-- Prompt Section -->
-    <div class="section">
-        <label for="prompt">Prompt:</label>
-        <textarea id="prompt" placeholder="Type your prompt here..."></textarea>
-        <button id="submitBtn" class="btn-primary" style="margin-top: 10px; width: 100%;">Generate Response</button>
-    </div>
-
-    <!-- Output Section -->
-    <div id="output">AI response will appear here...</div>
 </div>
 
-<!-- Gemini AI Integration Script -->
-<script type="module">
-    // Import the official Google Gen AI SDK from an ESM-compliant CDN
-    import { GoogleGenAI } from "https://esm.run";
+<script>
+    // Replace with your secret API key from Google AI Studio
+    const API_KEY = "YOUR_GEMINI_API_KEY"; 
 
-    // DOM Elements
-    const apiKeyInput = document.getElementById("apiKey");
-    const saveKeyBtn = document.getElementById("saveKeyBtn");
-    const clearKeyBtn = document.getElementById("clearKeyBtn");
-    const keyStatus = document.getElementById("keyStatus");
-    const promptInput = document.getElementById("prompt");
-    const submitBtn = document.getElementById("submitBtn");
-    const outputDiv = document.getElementById("output");
+    async function askGemini() {
+        const inputField = document.getElementById("userInput");
+        const outputDiv = document.getElementById("output");
+        const prompt = inputField.value;
 
-    // Load key from localStorage on page load
-    const savedKey = localStorage.getItem("user_gemini_api_key");
-    if (savedKey) {
-        apiKeyInput.value = savedKey;
-        keyStatus.innerText = "🔑 Key loaded from browser storage.";
-        keyStatus.style.color = "green";
-    }
-
-    // Save Key Functionality
-    saveKeyBtn.addEventListener("click", () => {
-        const key = apiKeyInput.value.trim();
-        if (!key) {
-            keyStatus.innerText = "❌ Please enter a valid key first.";
-            keyStatus.style.color = "red";
-            return;
-        }
-        localStorage.setItem("user_gemini_api_key", key);
-        keyStatus.innerText = "💾 Key saved securely in your browser storage!";
-        keyStatus.style.color = "green";
-    });
-
-    // Clear Key Functionality
-    clearKeyBtn.addEventListener("click", () => {
-        localStorage.removeItem("user_gemini_api_key");
-        apiKeyInput.value = "";
-        keyStatus.innerText = "🗑️ Key cleared from browser storage.";
-        keyStatus.style.color = "#666";
-    });
-
-    // Generate Response Functionality
-    submitBtn.addEventListener("click", async () => {
-        // Dynamic lookup: Checks the input box field directly or falls back to storage
-        const activeKey = apiKeyInput.value.trim() || localStorage.getItem("user_gemini_api_key");
-        
-        if (!activeKey) {
-            alert("Please provide a Gemini API Key in the designated input box first!");
-            return;
-        }
-
-        const textPrompt = promptInput.value.trim();
-        if (!textPrompt) return alert("Please enter a prompt!");
+        if (!prompt) return;
 
         outputDiv.innerText = "Thinking...";
+        inputField.value = "";
+
+        // API Endpoint for the Interactions API using gemini-3.5-flash
+        const url = `https://googleapis.com{API_KEY}`;
 
         try {
-            // Initialize the SDK using the user's private key
-            const ai = new GoogleGenAI({ apiKey: activeKey });
-
-            // Request generation from the foundational model
-            const interaction = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
-                contents: textPrompt,
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: "gemini-3.5-flash",
+                    input: prompt
+                })
             });
 
-            // Display the text markdown/plain-text response
-            outputDiv.innerText = interaction.text;
+            const data = await response.json();
+            
+            // Extract the generated text from the new Interactions API response format
+            if (data.output_text) {
+                outputDiv.innerText = data.output_text;
+            } else if (data.candidates && data.candidates[0].content.parts[0].text) {
+                // Fallback structure if using standard generateContent endpoint format
+                outputDiv.innerText = data.candidates[0].content.parts[0].text;
+            } else {
+                outputDiv.innerText = "Error: Could not parse response.";
+            }
 
         } catch (error) {
-            console.error("Gemini Error:", error);
-            outputDiv.innerText = `Error: ${error.message || "Failed to fetch response. Check console details."}`;
+            console.error("API Error:", error);
+            outputDiv.innerText = "Failed to connect to Gemini API.";
         }
-    });
+    }
 </script>
 
 </body>
