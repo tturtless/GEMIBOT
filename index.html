@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini API Code Loader</title>
+    <title>Gemini 3.5 API Code Loader</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -167,14 +167,15 @@
         outputDiv.innerText = "Thinking...";
         inputField.value = "";
 
-        // Standard API model configuration
-        const url = `https://googleapis.com{activeApiKey}`;
+        // URL endpoint clean from query strings for AQ key authorization rules
+        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent";
 
         try {
             const response = await fetch(url, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": activeApiKey // FIXED: Secure header transmission required for AQ-keys
                 },
                 body: JSON.stringify({
                     contents: [{
@@ -185,18 +186,23 @@
 
             const data = await response.json();
             
-            // CORRECTED: Fixed array element parsing sequence 
+            // Check for API-specific error blocks returned by Google
+            if (data.error) {
+                outputDiv.innerText = "API Error: " + data.error.message;
+                return;
+            }
+
+            // Extract response text safely from array elements
             if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
                 outputDiv.innerText = data.candidates[0].content.parts[0].text;
-            } else if (data.error) {
-                outputDiv.innerText = "API Error: " + data.error.message;
             } else {
-                outputDiv.innerText = "Error: Response structure did not contain text fields.";
+                outputDiv.innerText = "Error: Response structure did not match standard format.";
+                console.log("Unexpected response format:", data);
             }
 
         } catch (error) {
             console.error("Connection Error:", error);
-            outputDiv.innerText = "Connection Failed. Check your internet or console logs.";
+            outputDiv.innerText = "Connection Failed. Open your browser console (F12) to see if local network CORS policies are blocking Google.";
         }
     }
 </script>
