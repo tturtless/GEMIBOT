@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini API Code Key Refresh</title>
+    <title>Gemini API Code Loader</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -43,17 +43,23 @@
             border-radius: 4px;
             font-family: monospace;
         }
-        .refresh-btn {
+        .submit-btn {
             padding: 8px 12px;
-            background: #dc3545;
+            background: #28a745;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 12px;
+            font-weight: bold;
         }
-        .refresh-btn:hover {
-            background: #bd2130;
+        .submit-btn:hover {
+            background: #218838;
+        }
+        .status-msg {
+            font-size: 11px;
+            font-weight: bold;
+            margin-top: 2px;
         }
         .output-box {
             height: 180px;
@@ -61,9 +67,14 @@
             border-radius: 4px;
             padding: 10px;
             overflow-y: auto;
-            background: #fafafa;
+            background: #fdfdfd;
             margin-bottom: 15px;
             white-space: pre-wrap;
+        }
+        /* Chat inputs stay greyed out until key is submitted */
+        .disabled-chat {
+            opacity: 0.5;
+            pointer-events: none;
         }
         .input-group {
             display: flex;
@@ -93,51 +104,70 @@
 <div class="chat-container">
     <h3>Gemini 3.5 AI</h3>
     
-    <!-- User API Key Input & Refresh Section -->
+    <!-- API Key Input & Submit Loader Section -->
     <div class="key-section">
         <label for="apiKey">Enter your Gemini API Key:</label>
         <div class="key-input-group">
-            <input type="password" id="apiKey" class="key-input" placeholder="Paste your API key here...">
-            <button onclick="refreshApiKey()" class="refresh-btn">Refresh Key</button>
+            <input type="password" id="apiKey" class="key-input" placeholder="Paste 'AQ' key here...">
+            <button onclick="loadApiKey()" class="submit-btn">Submit Key</button>
         </div>
+        <div id="keyStatus" class="status-msg" style="color: #dc3545;">Key Status: Not Loaded</div>
     </div>
 
-    <!-- Response Output Box -->
-    <div id="output" class="output-box">AI responses will appear here...</div>
-    
-    <!-- Prompt Input Box and Button -->
-    <div class="input-group">
-        <input type="text" id="userInput" class="prompt-input" placeholder="Ask Gemini something...">
-        <button onclick="askGemini()" class="send-btn">Send</button>
+    <!-- Main Interface (Disabled until key is loaded) -->
+    <div id="chatInterface" class="disabled-chat">
+        <!-- Response Output Box -->
+        <div id="output" class="output-box">AI responses will appear here...</div>
+        
+        <!-- Prompt Input Box and Button -->
+        <div class="input-group">
+            <input type="text" id="userInput" class="prompt-input" placeholder="Ask Gemini something...">
+            <button onclick="askGemini()" class="send-btn">Send</button>
+        </div>
     </div>
 </div>
 
 <script>
-    // Clears out the API key box and UI states completely
-    function refreshApiKey() {
-        document.getElementById("apiKey").value = "";
-        document.getElementById("userInput").value = "";
-        document.getElementById("output").innerText = "API Code cleared. Enter your new 'AQ' key above.";
-        document.getElementById("apiKey").focus();
-    }
+    // Global variable to hold the successfully loaded key
+    let activeApiKey = "";
 
-    async function askGemini() {
+    function loadApiKey() {
         const apiKeyField = document.getElementById("apiKey");
-        const inputField = document.getElementById("userInput");
-        const outputDiv = document.getElementById("output");
-        
-        const apiKey = apiKeyField.value.trim();
-        const prompt = inputField.value.trim();
+        const statusMsg = document.getElementById("keyStatus");
+        const chatInterface = document.getElementById("chatInterface");
+        const rawKey = apiKeyField.value.trim();
 
-        // 1. Validate that the API key box is not empty
-        if (!apiKey) {
-            outputDiv.innerText = "Error: Please enter your API key first.";
+        if (!rawKey) {
+            statusMsg.innerText = "Error: Key box is empty.";
+            statusMsg.style.color = "#dc3545";
+            chatInterface.classList.add("disabled-chat");
+            activeApiKey = "";
             return;
         }
 
-        // 2. Prefix validation check (verifying if key starts with AQ)
-        if (!apiKey.startsWith("AQ")) {
-            outputDiv.innerText = "Error: Invalid key format. Your key must start with 'AQ'.";
+        if (!rawKey.startsWith("AQ")) {
+            statusMsg.innerText = "Error: Key must start with 'AQ'.";
+            statusMsg.style.color = "#dc3545";
+            chatInterface.classList.add("disabled-chat");
+            activeApiKey = "";
+            return;
+        }
+
+        // Lock in the key and unlock the chat UI interface components
+        activeApiKey = rawKey;
+        statusMsg.innerText = "Key Status: Loaded & Active ✔";
+        statusMsg.style.color = "#28a745";
+        chatInterface.classList.remove("disabled-chat");
+    }
+
+    async function askGemini() {
+        const inputField = document.getElementById("userInput");
+        const outputDiv = document.getElementById("output");
+        const prompt = inputField.value.trim();
+
+        // Safety backup check in case DOM structure modification bypasses CSS blocks
+        if (!activeApiKey) {
+            outputDiv.innerText = "Please submit an active 'AQ' API key above first.";
             return;
         }
 
@@ -146,8 +176,7 @@
         outputDiv.innerText = "Thinking...";
         inputField.value = "";
 
-        // API Endpoint targeting gemini-3.5-flash
-        const url = `https://googleapis.com{apiKey}`;
+        const url = `https://googleapis.com{activeApiKey}`;
 
         try {
             const response = await fetch(url, {
@@ -164,19 +193,18 @@
 
             const data = await response.json();
             
-            // Handle modern JSON response payload structures
             if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].text) {
                 outputDiv.innerText = data.candidates[0].content.parts[0].text;
             } else if (data.error) {
                 outputDiv.innerText = "API Error: " + data.error.message;
             } else {
-                outputDiv.innerText = "Error: Could not parse response payload format.";
+                outputDiv.innerText = "Error parsing response. Check your console log details.";
                 console.log(data);
             }
 
         } catch (error) {
             console.error("Network Error:", error);
-            outputDiv.innerText = "Failed to connect to the Gemini API.";
+            outputDiv.innerText = "Failed to connect to the Gemini API endpoint.";
         }
     }
 </script>
