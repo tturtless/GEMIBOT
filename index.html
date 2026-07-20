@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini 3.5 AI Chatbox</title>
+    <title>Gemini User-Key Chatbox</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,14 +15,31 @@
             margin: 0;
         }
         .chat-container {
-            width: 400px;
+            width: 420px;
             background: #ffffff;
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             padding: 20px;
         }
+        .key-section {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #555;
+        }
+        .key-input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+        }
         .output-box {
-            height: 200px;
+            height: 180px;
             border: 1px solid #ccc;
             border-radius: 4px;
             padding: 10px;
@@ -35,7 +52,7 @@
             display: flex;
             gap: 10px;
         }
-        input[type="text"] {
+        .prompt-input {
             flex: 1;
             padding: 10px;
             border: 1px solid #ccc;
@@ -58,32 +75,51 @@
 
 <div class="chat-container">
     <h3>Gemini 3.5 AI</h3>
-    <!-- Response Box -->
+    
+    <!-- User API Key Input Box -->
+    <div class="key-section">
+        <label for="apiKey">Enter your Gemini API Key:</label>
+        <input type="password" id="apiKey" class="key-input" placeholder="Paste your API key here...">
+    </div>
+
+    <!-- Response Output Box -->
     <div id="output" class="output-box">AI responses will appear here...</div>
     
-    <!-- Input Box and Button -->
+    <!-- Prompt Input Box and Button -->
     <div class="input-group">
-        <input type="text" id="userInput" placeholder="Ask Gemini something...">
+        <input type="text" id="userInput" class="prompt-input" placeholder="Ask Gemini something...">
         <button onclick="askGemini()">Send</button>
     </div>
 </div>
 
 <script>
-    // Replace with your secret API key from Google AI Studio
-    const API_KEY = "YOUR_GEMINI_API_KEY"; 
-
     async function askGemini() {
+        const apiKeyField = document.getElementById("apiKey");
         const inputField = document.getElementById("userInput");
         const outputDiv = document.getElementById("output");
-        const prompt = inputField.value;
+        
+        const apiKey = apiKeyField.value.trim();
+        const prompt = inputField.value.trim();
+
+        // 1. Validate that the API key box is not empty
+        if (!apiKey) {
+            outputDiv.innerText = "Error: Please enter your API key first.";
+            return;
+        }
+
+        // 2. Prefix validation check (verifying if key starts with AQ)
+        if (!apiKey.startsWith("AQ")) {
+            outputDiv.innerText = "Error: Invalid key format. Your key must start with 'AQ'.";
+            return;
+        }
 
         if (!prompt) return;
 
         outputDiv.innerText = "Thinking...";
         inputField.value = "";
 
-        // API Endpoint for the Interactions API using gemini-3.5-flash
-        const url = `https://googleapis.com{API_KEY}`;
+        // API Endpoint using the dynamic user-provided API key
+        const url = `https://googleapis.com{apiKey}`;
 
         try {
             const response = await fetch(url, {
@@ -92,26 +128,27 @@
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    model: "gemini-3.5-flash",
-                    input: prompt
+                    contents: [{
+                        parts: [{ text: prompt }]
+                    }]
                 })
             });
 
             const data = await response.json();
             
-            // Extract the generated text from the new Interactions API response format
-            if (data.output_text) {
-                outputDiv.innerText = data.output_text;
-            } else if (data.candidates && data.candidates[0].content.parts[0].text) {
-                // Fallback structure if using standard generateContent endpoint format
+            // Extract the generated text from the response payload
+            if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
                 outputDiv.innerText = data.candidates[0].content.parts[0].text;
+            } else if (data.error) {
+                outputDiv.innerText = "API Error: " + data.error.message;
             } else {
-                outputDiv.innerText = "Error: Could not parse response.";
+                outputDiv.innerText = "Error: Could not parse response. Check your console.";
+                console.log(data);
             }
 
         } catch (error) {
-            console.error("API Error:", error);
-            outputDiv.innerText = "Failed to connect to Gemini API.";
+            console.error("Network Error:", error);
+            outputDiv.innerText = "Failed to connect to the Gemini API.";
         }
     }
 </script>
