@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini AI HTML Integration</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; }
+        .container { max-width: 600px; margin: auto; }
+        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+        button { padding: 10px 20px; background-color: #4285F4; color: white; border: none; cursor: pointer; }
+        #output { margin-top: 20px; padding: 15px; background: #f4f4f4; border-left: 5px solid #4285F4; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Ask Gemini AI</h2>
+    <textarea id="prompt" placeholder="Type your question here..."></textarea>
+    <button id="submitBtn">Generate Response</button>
+    <div id="output">AI response will appear here...</div>
+</div>
+
+<!-- Gemini AI Integration Script -->
+<script type="module">
+    // 1. Import the official Google Gen AI SDK from an ESM-compliant CDN
+    import { GoogleGenAI } from "https://esm.run";
+
+    // 2. Define elements
+    const promptInput = document.getElementById("prompt");
+    const submitBtn = document.getElementById("submitBtn");
+    const outputDiv = document.getElementById("output");
+
+    // 3. Set up event listener
+    submitBtn.addEventListener("click", async () => {
+        const textPrompt = promptInput.value.trim();
+        if (!textPrompt) return alert("Please enter a prompt!");
+
+        outputDiv.innerText = "Thinking...";
+
+        try {
+            // 4. Initialize the client (Pass your API Key)
+            const ai = new GoogleGenAI({ apiKey: "YOUR_API_KEY_HERE" });
+
+            // 5. Call the API using the latest recommended model
+            const interaction = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: textPrompt,
+            });
+
+            // 6. Display the text output
+            outputDiv.innerText = interaction.text;
+
+        } catch (error) {
+            console.error("Gemini Error:", error);
+            outputDiv.innerText = "Error fetching response. Check developer console.";
+        }
+    });
+</script>
+
+</body>
+</html>
