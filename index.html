@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini User-Key Chatbox</title>
+    <title>Gemini API Code Key Refresh</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -32,11 +32,28 @@
             font-weight: bold;
             color: #555;
         }
+        .key-input-group {
+            display: flex;
+            gap: 10px;
+        }
         .key-input {
+            flex: 1;
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
             font-family: monospace;
+        }
+        .refresh-btn {
+            padding: 8px 12px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .refresh-btn:hover {
+            background: #bd2130;
         }
         .output-box {
             height: 180px;
@@ -58,7 +75,7 @@
             border: 1px solid #ccc;
             border-radius: 4px;
         }
-        button {
+        .send-btn {
             padding: 10px 15px;
             background: #1a73e8;
             color: white;
@@ -66,7 +83,7 @@
             border-radius: 4px;
             cursor: pointer;
         }
-        button:hover {
+        .send-btn:hover {
             background: #1557b0;
         }
     </style>
@@ -76,10 +93,13 @@
 <div class="chat-container">
     <h3>Gemini 3.5 AI</h3>
     
-    <!-- User API Key Input Box -->
+    <!-- User API Key Input & Refresh Section -->
     <div class="key-section">
         <label for="apiKey">Enter your Gemini API Key:</label>
-        <input type="password" id="apiKey" class="key-input" placeholder="Paste your API key here...">
+        <div class="key-input-group">
+            <input type="password" id="apiKey" class="key-input" placeholder="Paste your API key here...">
+            <button onclick="refreshApiKey()" class="refresh-btn">Refresh Key</button>
+        </div>
     </div>
 
     <!-- Response Output Box -->
@@ -88,11 +108,19 @@
     <!-- Prompt Input Box and Button -->
     <div class="input-group">
         <input type="text" id="userInput" class="prompt-input" placeholder="Ask Gemini something...">
-        <button onclick="askGemini()">Send</button>
+        <button onclick="askGemini()" class="send-btn">Send</button>
     </div>
 </div>
 
 <script>
+    // Clears out the API key box and UI states completely
+    function refreshApiKey() {
+        document.getElementById("apiKey").value = "";
+        document.getElementById("userInput").value = "";
+        document.getElementById("output").innerText = "API Code cleared. Enter your new 'AQ' key above.";
+        document.getElementById("apiKey").focus();
+    }
+
     async function askGemini() {
         const apiKeyField = document.getElementById("apiKey");
         const inputField = document.getElementById("userInput");
@@ -118,7 +146,7 @@
         outputDiv.innerText = "Thinking...";
         inputField.value = "";
 
-        // API Endpoint using the dynamic user-provided API key
+        // API Endpoint targeting gemini-3.5-flash
         const url = `https://googleapis.com{apiKey}`;
 
         try {
@@ -136,13 +164,13 @@
 
             const data = await response.json();
             
-            // Extract the generated text from the response payload
-            if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts[0].text) {
+            // Handle modern JSON response payload structures
+            if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0].text) {
                 outputDiv.innerText = data.candidates[0].content.parts[0].text;
             } else if (data.error) {
                 outputDiv.innerText = "API Error: " + data.error.message;
             } else {
-                outputDiv.innerText = "Error: Could not parse response. Check your console.";
+                outputDiv.innerText = "Error: Could not parse response payload format.";
                 console.log(data);
             }
 
